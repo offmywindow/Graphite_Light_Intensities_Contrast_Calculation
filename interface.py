@@ -13,7 +13,7 @@ class GUI():
         #define basic window constants
         self.window = tk.Tk()
         self.window.title("Graphite Contrast Calculation")
-        self.window.geometry("2000x2000")
+        self.window.geometry("1200x900")
         self.main_frame = tk.LabelFrame(self.window,text="main_frame")
         self.main_frame.pack(fill=tk.BOTH,expand=True)
 
@@ -60,19 +60,19 @@ class GUI():
         self.blue_contrast_var = tk.StringVar(value=None)
         self.green_contrast_var = tk.StringVar(value=None)
         self.red_contrast_label = tk.Label(self.widgets_frame,textvariable=(self.red_contrast_var),
-        font=('Arial',16))
+        font=('Arial',12))
         self.blue_contrast_label = tk.Label(self.widgets_frame,textvariable=(self.blue_contrast_var),
-        font=('Arial',16))
+        font=('Arial',12))
         self.green_contrast_label = tk.Label(self.widgets_frame,textvariable=(self.green_contrast_var),
-        font=('Arial',16))
+        font=('Arial',12))
         self.red_contrast_label.pack()
         self.blue_contrast_label.pack()
         self.green_contrast_label.pack()
 
         self.current_arw = None #place holder for current arw
         self.current_line_id = None #place holder for current rectangle id
-        self.lines = [] #to record the rectangles'id
-        self.rois = [] # to record current two rectangles' coordinates
+        self.lines = [] #to record the lines'id
+        self.rois = [] # to record current two lines' coordinates
         self.file_path = None #Place holder for fild_path
 
     #Select file and transfer the file path into arwfile class in data_analysis
@@ -89,7 +89,9 @@ class GUI():
     #show rbg image on tkinter interface
     def show_image(self):
         image = Image.fromarray(self.current_arw.rgb_image)
-        image.thumbnail((1000,800))
+        # canvas_width = self.canvas.winfo_width()
+        # canvas_height = self.canvas.winfo_height()
+        image.thumbnail((800,600))
         self.photo = ImageTk.PhotoImage(image)
         #grab x,y dimensions from canvas image display size
         self.display_width,self.display_height = image.size
@@ -130,6 +132,7 @@ class GUI():
         self.start_x = None
         self.start_y = None
         self.current_line_id = None
+
         #call data anaylsis to calculate light intensity, call show histogram function
         if len(self.lines) >= 2:
             self.current_arw.mean_analysis(self.rois)
@@ -138,6 +141,8 @@ class GUI():
             self.blue_contrast_var.set(f"Blue_Contrast:{self.current_arw.blue_contrast}")
             self.green_contrast_var.set(f"Green_Contrast:{self.current_arw.green_contrast}")
             self.show_histogram("red")
+            print("Image:", self.display_width, self.display_height)
+            print("Canvas:", self.canvas.winfo_width(), self.canvas.winfo_height())
 
 
     #Function to make histogram with matplotlib
@@ -161,6 +166,7 @@ class GUI():
             color = "green"
             title = "Green Histogram"
 
+        #histogram information 
         self.ax.hist(data1,bins=50,alpha=0.5,color=color,label="Sample")
         self.ax.hist(data2,bins=50,alpha=0.8,color=color,label="Background")
         self.ax.set_title(title)
