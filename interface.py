@@ -36,16 +36,24 @@ class GUI():
         self.histo_frame.pack(side=tk.RIGHT, fill=tk.BOTH,expand=True)
         self.channel_var = tk.StringVar(value="red")
         tk.Radiobutton(self.histo_frame, text="red", variable=self.channel_var,
-                       value="red", command=self.update_histogram).pack(side=tk.TOP)
+                       value="red", command=self.update_histogram).pack()
         tk.Radiobutton(self.histo_frame, text="green", variable=self.channel_var,
-                       value="green", command=self.update_histogram).pack(side=tk.TOP)
+                       value="green", command=self.update_histogram).pack()
         tk.Radiobutton(self.histo_frame, text="blue", variable=self.channel_var,
-                       value="blue", command=self.update_histogram).pack(side=tk.TOP)
+                       value="blue", command=self.update_histogram).pack()
         # Make histogram figure with matplotlib
         self.fig = Figure(figsize=(3, 2))
         self.ax = self.fig.add_subplot()
         self.histo_canvas = FigureCanvasTkAgg(self.fig, master=self.histo_frame)
         self.histo_canvas.get_tk_widget().pack()
+
+        #Make a combobox for different types of intensity contrast calculation
+        self.combobox = ttk.Combobox(self.histo_frame, state="readonly",values=["Full Mean Contrast Calculation", "Mid 80% Intensity Contrast Calculation"])
+        self.combobox.current(0)
+        self.combobox.pack(side=tk.TOP)
+        #bind a function with combo selection
+        self.combobox.bind("<<ComboboxSelected>>",self.calculation_method)
+        self.method = "Full Mean Contrast Calculation"
 
         # -----------------------------------------
         self.table_buttons_frame = tk.Frame(self.histo_frame)
@@ -183,12 +191,18 @@ class GUI():
 
         # call data anaylsis to calculate light intensity, call show histogram function
         if len(self.lines) >= 2:
-            self.current_arw.mean_analysis(self.rois)
+
+            self.current_arw.mean_analysis(self.rois,self.method)
             self.current_arw.contrast_calculation()
             self.red_contrast_var.set(f"Red_Contrast:{self.current_arw.red_contrast}")
             self.blue_contrast_var.set(f"Blue_Contrast:{self.current_arw.blue_contrast}")
             self.green_contrast_var.set(f"Green_Contrast:{self.current_arw.green_contrast}")
             self.show_histogram("red")
+
+    # function to pick the method of calculation according to the variable in combobox
+    def calculation_method(self, event):
+        self.method = self.combobox.get()
+        print(self.method)
 
 
     # Function to make histogram with matplotlib
