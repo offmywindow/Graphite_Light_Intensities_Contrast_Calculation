@@ -21,7 +21,7 @@ class arwfile:
             self.rgb_image = raw.postprocess()
 
     # Function to analysis data from rois,collect mean values from each channel
-    def mean_analysis(self, rois,method):
+    def line_analysis(self, rois,method):
 
         for i, roi in enumerate(rois):
             x1, y1, x2, y2 = roi
@@ -41,15 +41,34 @@ class arwfile:
                     self.intensities["blue"][i].append(value)
                 else:
                     self.intensities["green"][i].append(value)
+
+            #Two methods of mean_contrast calculation
             if method == "Full Mean Contrast Calculation":
-                self.mean_red.append(np.mean(self.intensities["red"][i]))
-                self.mean_blue.append(np.mean(self.intensities["blue"][i]))
-                self.mean_green.append(np.mean(self.intensities["green"][i]))
+                pass
             elif method == "Mid 80% Intensity Contrast Calculation":
                 for channel in self.intensities:
-                    for x in self.intensities[channel]:
-                        
-            
+                    #transfer the list to numpy array
+                    values = np.array(self.intensities[channel][i])
+
+                    low = np.percentile(values,10)
+                    high = np.percentile(values, 90)
+                    mid_80 = values[(values>low)&(values<high)]
+                    #The reason convert numpy array to python list is make sure the function "cleareverything"(.clear()method) in interface moduel works fine
+                    self.intensities[channel][i] = mid_80.tolist()
+
+        self.mean_analysis()
+
+    #mean intensity analysis when roi pick method is rectangle
+    def polygon_analysis(self, rois,method):
+        pass
+
+    #function to analysis mean intensities before calculating contrast
+    def mean_analysis(self):
+        for i in range(0,2):
+            self.mean_red.append(np.mean(self.intensities["red"][i]))
+            self.mean_blue.append(np.mean(self.intensities["blue"][i]))
+            self.mean_green.append(np.mean(self.intensities["green"][i]))
+        self.contrast_calculation()
 
     def contrast_calculation(self):
         self.red_contrast = (self.mean_red[0] - self.mean_red[1]) / self.mean_red[1]
