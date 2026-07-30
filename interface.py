@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import filedialog
 from tkinter import ttk
-import data_analysis as analysis
+import data_analysis
 from PIL import Image, ImageTk
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
@@ -48,12 +48,19 @@ class GUI():
         self.histo_canvas.get_tk_widget().pack()
 
         #Make a combobox for different types of intensity contrast calculation
-        self.combobox = ttk.Combobox(self.histo_frame, state="readonly",values=["Full Mean Contrast Calculation", "Mid 80% Intensity Contrast Calculation"])
-        self.combobox.current(0)
-        self.combobox.pack(side=tk.TOP)
+        self.calc_combobox = ttk.Combobox(self.histo_frame, state="readonly",values=["Full Mean Contrast Calculation", "Mid 80% Intensity Contrast Calculation"])
+        self.calc_combobox.current(1)
+        self.calc_combobox.pack(side=tk.TOP)
         #bind a function with combo selection
-        self.combobox.bind("<<ComboboxSelected>>",self.calculation_method)
-        self.method = "Full Mean Contrast Calculation"
+        self.calc_combobox.bind("<<ComboboxSelected>>",self.calculation_method)
+        self.calc_method = "Mid 80% Intensity Contrast Calculation"
+
+        #Method to pick roi
+        self.roi_combobox = ttk.Combobox(self.histo_frame,state="readonly",values=["Line","Polygon"])
+        self.roi_combobox.current(1)
+        self.roi_combobox.pack(side=tk.TOP)
+        self.roi_combobox.bind("<<ComboboxSelected>>",self.roi_method)
+        self.roi_method = "Polygon"
 
         # -----------------------------------------
         self.table_buttons_frame = tk.Frame(self.histo_frame)
@@ -126,20 +133,21 @@ class GUI():
         self.green_contrast_label.pack()
 
         self.current_arw = None  # place holder for current arw
-        self.current_line_id = None  # place holder for current rectangle id
+        self.current_line_id = None  # place holder for current line id
         self.lines = []  # to record the lines'id
         self.rois = []  # to record current two lines' coordinates
         self.file_path = None  # Place holder for fild_path
 
     # Select file and transfer the file path into arwfile class in data_analysis
     def selectfile(self):
-        self.file_path = filedialog.askopenfilename(filetypes=[("ARW files", "*.ARW")])
-        if self.file_path:
+        file_path = filedialog.askopenfilename(filetypes=[("ARW files", "*.ARW")])
+        if file_path:
+            self.file_path = file_path
             # clear everything before using a new arwfile
             self.canvas.delete("all")
             if self.current_arw is not None:
                 self.cleareverything()
-            self.current_arw = analysis.arwfile(self.file_path)
+            self.current_arw = data_analysis.arwfile(self.file_path)
             self.show_image()
 
     # show rbg image on tkinter interface
@@ -158,7 +166,7 @@ class GUI():
         # incase user click on canvas before loading a file
         if self.current_arw is None:
             return
-        # clean the previous two rectangles before pick new roi
+        # clean the previous two lines before pick new roi
         if len(self.lines) >= 2:
             for r in self.lines:
                 self.canvas.delete(r)
@@ -192,8 +200,11 @@ class GUI():
         # call data anaylsis to calculate light intensity, call show histogram function
         if len(self.lines) >= 2:
 
-            self.current_arw.mean_analysis(self.rois,self.method)
-            self.current_arw.contrast_calculation()
+            if self.roi_method == "Line":
+                self.current_arw.line_analysis(self.rois,self.calc_method)
+            elif self.roi_method == "Polygon":
+                self.current_arw.polygon_analysis(self.rois,self.calc_method)
+
             self.red_contrast_var.set(f"Red_Contrast:{self.current_arw.red_contrast}")
             self.blue_contrast_var.set(f"Blue_Contrast:{self.current_arw.blue_contrast}")
             self.green_contrast_var.set(f"Green_Contrast:{self.current_arw.green_contrast}")
@@ -201,9 +212,11 @@ class GUI():
 
     # function to pick the method of calculation according to the variable in combobox
     def calculation_method(self, event):
-        self.method = self.combobox.get()
-        print(self.method)
+        self.calc_method = self.calc_combobox.get()
 
+    #Function to pick a method to pick roi
+    def roi_method(self,event):
+        self.roi_method = self.roi_combobox.get()
 
     # Function to make histogram with matplotlib
     def show_histogram(self, channel):
