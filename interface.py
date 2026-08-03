@@ -60,7 +60,7 @@ class GUI():
         self.roi_combobox.current(1)
         self.roi_combobox.pack(side=tk.TOP)
         self.roi_combobox.bind("<<ComboboxSelected>>",self.roi_method)
-        self.roi_method = "Polygon"
+        self.the_roi_method = "Polygon"
 
         # -----------------------------------------
         self.table_buttons_frame = tk.Frame(self.histo_frame)
@@ -113,11 +113,6 @@ class GUI():
         self.canvas = tk.Canvas(self.image_frame, width=1000, height=1000)
         self.canvas.pack(fill=tk.BOTH, expand=True)
 
-        # Bind events on functions for picking roi on the canvas
-        self.canvas.bind("<Button-1>", self.start_roi)
-        self.canvas.bind("<B1-Motion>", self.drag_roi)
-        self.canvas.bind("<ButtonRelease-1>", self.end_roi)
-
         # StringVar and labels to show RGB contrast
         self.red_contrast_var = tk.StringVar(value=None)
         self.blue_contrast_var = tk.StringVar(value=None)
@@ -137,6 +132,10 @@ class GUI():
         self.lines = []  # to record the lines'id
         self.rois = []  # to record current two lines' coordinates
         self.file_path = None  # Place holder for fild_path
+        self.points = [] #place holder for polygon points 
+        self.polygon_id = [] #place holder for polygon ids
+        self.current_polygon_id = None #current polygon id, the one is drawing
+        self.oval_ids = [] #points for drawing the polygon
 
     # Select file and transfer the file path into arwfile class in data_analysis
     def selectfile(self):
@@ -161,20 +160,18 @@ class GUI():
         self.display_width, self.display_height = image.size
         self.canvas.create_image(0, 0, anchor="nw", image=self.photo)
 
+        self.change_roi_method()
+
     # Functions to pick roi and draw line
     def start_roi(self, event):
-        # incase user click on canvas before loading a file
-        if self.current_arw is None:
-            return
+
         # clean the previous two lines before pick new roi
         if len(self.lines) >= 2:
-            for r in self.lines:
-                self.canvas.delete(r)
             self.cleareverything()
         self.start_x = event.x
         self.start_y = event.y
         self.current_line_id = self.canvas.create_line(self.start_x, self.start_y,
-                                                       self.start_x, self.start_y, fill="red", width=2)
+                                                       self.start_x, self.start_y, fill="red", width=2,tags="roi")
 
     def drag_roi(self, event):
         # update line size
@@ -200,24 +197,77 @@ class GUI():
         # call data anaylsis to calculate light intensity, call show histogram function
         if len(self.lines) >= 2:
 
-            if self.roi_method == "Line":
-                self.current_arw.line_analysis(self.rois,self.calc_method)
-            elif self.roi_method == "Polygon":
-                self.current_arw.polygon_analysis(self.rois,self.calc_method)
-
+            self.current_arw.line_analysis(self.rois,self.calc_method)
+        
             self.red_contrast_var.set(f"Red_Contrast:{self.current_arw.red_contrast}")
             self.blue_contrast_var.set(f"Blue_Contrast:{self.current_arw.blue_contrast}")
             self.green_contrast_var.set(f"Green_Contrast:{self.current_arw.green_contrast}")
-            self.show_histogram("red")
 
-    # function to pick the method of calculation according to the variable in combobox
+
+    # Function to pick the method of calculation according to the variable in combobox
     def calculation_method(self, event):
         self.calc_method = self.calc_combobox.get()
 
-    #Function to pick a method to pick roi
-    def roi_method(self,event):
-        self.roi_method = self.roi_combobox.get()
 
+    #Functions for picking roi by polygon,reocrd the picked points
+    def left_click(self,event):
+        if len(self.rois) >= 2:
+            #clear polygon, points..etc before draw a new set of rois
+            for r in self.oval_ids:
+                self.canvas.delete(r)
+            self.canvas.delete("roi")
+            self.cleareverything()
+
+        self.points.append((event.x,event.y))
+        r = 1 #radius of the small circle
+        #make a small circle to show the point that the user picked
+        oval_id = self.canvas.create_oval(event.x-r,event.y-r,event.x+r,event.y+r,fill = "yellow")
+        self.oval_ids.append(oval_id)
+    #finishing polygon by connect the current point to first point
+    def finish_polygon(self,event):
+        #Incase the user mis-clicked before having enough points
+        #Create Polygon requires at least three points
+        if len(self.points) < 3:
+            return
+
+        #create a polygon with points user clicked
+        self.current_polygon_id = self.canvas.create_polygon(self.points,
+                            outline = "red", fill='',width=2,tags="roi")
+        self.oval_ids.append(self.current_polygon_id)
+
+        y_scale = self.current_arw.raw_data.shape[0] / self.display_height
+        x_scale = self.current_arw.raw_data.shape[1] / self.display_width
+        #analysis the points in self.points by right scale
+        new_points = [] #place holder for raw_data coordinate points
+        for x,y in self.points:
+            #transfer the x and y recorded by polygon to raw_data coordinate points
+            x_new = np.round(x * x_scale)
+            y_new = np.round(y * y_scale)
+            new_points.append((x_new,y_new))
+        
+        self.rois.append(new_points)
+        self.points.clear()
+
+        if len(self.rois) == 2:
+            self.current_arw.polygon_analysis(self.rois,self.calc_method)
+
+    # Function to pick a method to pick roi 
+    # Bind events on functions for picking roi on the canvas, depending on which methods
+    def roi_method(self,event):
+        for r in self.oval_ids:
+            self.canvas.delete(r)
+        self.canvas.delete("roi")
+        self.the_roi_method = self.roi_combobox.get()
+        self.change_roi_method()
+    def change_roi_method(self):
+        if self.the_roi_method == "Line":
+            self.canvas.bind("<Button-1>", self.start_roi)
+            self.canvas.bind("<B1-Motion>", self.drag_roi)
+            self.canvas.bind("<ButtonRelease-1>", self.end_roi)
+        elif self.the_roi_method == "Polygon":
+            self.canvas.bind("<Button-1>", self.left_click)
+            self.canvas.bind("<Button-2>",self.finish_polygon)
+            self.canvas.bind("<Button-3>",self.finish_polygon)
     # Function to make histogram with matplotlib
     def show_histogram(self, channel):
 
@@ -254,7 +304,7 @@ class GUI():
             self.show_histogram(channel)
 
     def record_data(self):
-        if self.file_path is None or len(self.lines) < 2:
+        if self.file_path is None or len(self.rois) < 2:
             return
 
         filename = os.path.basename(self.file_path)
@@ -350,6 +400,7 @@ class GUI():
         self.current_arw.mean_red.clear()
         self.current_arw.mean_green.clear()
         self.lines.clear()
+        self.canvas.delete("roi")
         self.rois.clear()
         for i in self.current_arw.intensities.values():
             for j in i:
