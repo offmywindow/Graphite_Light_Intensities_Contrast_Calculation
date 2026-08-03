@@ -1,5 +1,6 @@
 import rawpy as r
 import numpy as np
+from PIL import Image,ImageDraw
 
 # black level is a constant,512
 # black_level = raw.black_level_per_channel
@@ -60,8 +61,15 @@ class arwfile:
 
     #mean intensity analysis when roi pick method is rectangle
     def polygon_analysis(self, rois,method):
-        pass
+        self.polygon_points = []
+        for point_sets in rois:
+            for points in point_sets:
+                
+            height,width = self.raw_data.shape
+            mask = Image.new("L",(width,height),0)
 
+            draw = ImageDraw.Draw(mask)
+            draw.polygon()
     #function to analysis mean intensities before calculating contrast
     def mean_analysis(self):
         for i in range(0,2):
@@ -74,5 +82,4 @@ class arwfile:
         self.red_contrast = (self.mean_red[0] - self.mean_red[1]) / self.mean_red[1]
         self.blue_contrast = (self.mean_blue[0] - self.mean_blue[1]) / self.mean_blue[1]
         self.green_contrast = (self.mean_green[0] - self.mean_green[1]) / self.mean_green[1]
-
 
