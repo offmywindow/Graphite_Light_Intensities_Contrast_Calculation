@@ -33,7 +33,7 @@ class GUI():
 
         # define frame for histrogram,also three choices of histogram
         self.histo_frame = tk.LabelFrame(self.main_frame, text="histo_frame")
-        self.histo_frame.pack(side=tk.RIGHT, fill=tk.BOTH,expand=True)
+        self.histo_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
         self.channel_var = tk.StringVar(value="red")
         tk.Radiobutton(self.histo_frame, text="red", variable=self.channel_var,
                        value="red", command=self.update_histogram).pack()
@@ -47,19 +47,20 @@ class GUI():
         self.histo_canvas = FigureCanvasTkAgg(self.fig, master=self.histo_frame)
         self.histo_canvas.get_tk_widget().pack()
 
-        #Make a combobox for different types of intensity contrast calculation
-        self.calc_combobox = ttk.Combobox(self.histo_frame, state="readonly",values=["Full Mean Contrast Calculation", "Mid 80% Intensity Contrast Calculation"])
+        # Make a combobox for different types of intensity contrast calculation
+        self.calc_combobox = ttk.Combobox(self.histo_frame, state="readonly", values=["Full Mean Contrast Calculation",
+                                                                                      "Mid 80% Intensity Contrast Calculation"])
         self.calc_combobox.current(1)
         self.calc_combobox.pack(side=tk.TOP)
-        #bind a function with combo selection
-        self.calc_combobox.bind("<<ComboboxSelected>>",self.calculation_method)
+        # bind a function with combo selection
+        self.calc_combobox.bind("<<ComboboxSelected>>", self.calculation_method)
         self.calc_method = "Mid 80% Intensity Contrast Calculation"
 
-        #Method to pick roi
-        self.roi_combobox = ttk.Combobox(self.histo_frame,state="readonly",values=["Line","Polygon"])
+        # Method to pick roi
+        self.roi_combobox = ttk.Combobox(self.histo_frame, state="readonly", values=["Line", "Polygon"])
         self.roi_combobox.current(1)
         self.roi_combobox.pack(side=tk.TOP)
-        self.roi_combobox.bind("<<ComboboxSelected>>",self.roi_method)
+        self.roi_combobox.bind("<<ComboboxSelected>>", self.roi_method)
         self.the_roi_method = "Polygon"
 
         # -----------------------------------------
@@ -132,10 +133,10 @@ class GUI():
         self.lines = []  # to record the lines'id
         self.rois = []  # to record current two lines' coordinates
         self.file_path = None  # Place holder for fild_path
-        self.points = [] #place holder for polygon points 
-        self.polygon_id = [] #place holder for polygon ids
-        self.current_polygon_id = None #current polygon id, the one is drawing
-        self.oval_ids = [] #points for drawing the polygon
+        self.points = []  # place holder for polygon points
+        self.polygon_id = []  # place holder for polygon ids
+        self.current_polygon_id = None  # current polygon id, the one is drawing
+        self.oval_ids = []  # points for drawing the polygon
 
     # Select file and transfer the file path into arwfile class in data_analysis
     def selectfile(self):
@@ -171,7 +172,7 @@ class GUI():
         self.start_x = event.x
         self.start_y = event.y
         self.current_line_id = self.canvas.create_line(self.start_x, self.start_y,
-                                                       self.start_x, self.start_y, fill="red", width=2,tags="roi")
+                                                       self.start_x, self.start_y, fill="red", width=2, tags="roi")
 
     def drag_roi(self, event):
         # update line size
@@ -196,82 +197,113 @@ class GUI():
 
         # call data anaylsis to calculate light intensity, call show histogram function
         if len(self.lines) >= 2:
+            self.current_arw.line_analysis(self.rois, self.calc_method)
 
-            self.current_arw.line_analysis(self.rois,self.calc_method)
-        
             self.red_contrast_var.set(f"Red_Contrast:{self.current_arw.red_contrast}")
             self.blue_contrast_var.set(f"Blue_Contrast:{self.current_arw.blue_contrast}")
             self.green_contrast_var.set(f"Green_Contrast:{self.current_arw.green_contrast}")
 
+            self.update_histogram()
 
     # Function to pick the method of calculation according to the variable in combobox
     def calculation_method(self, event):
         self.calc_method = self.calc_combobox.get()
 
+    # Functions for picking roi by polygon,reocrd the picked points
+    def left_click(self, event):
 
-    #Functions for picking roi by polygon,reocrd the picked points
-    def left_click(self,event):
         if len(self.rois) >= 2:
-            #clear polygon, points..etc before draw a new set of rois
+            # clear polygon, points..etc before draw a new set of rois
             for r in self.oval_ids:
                 self.canvas.delete(r)
             self.canvas.delete("roi")
             self.cleareverything()
 
-        self.points.append((event.x,event.y))
-        r = 1 #radius of the small circle
-        #make a small circle to show the point that the user picked
-        oval_id = self.canvas.create_oval(event.x-r,event.y-r,event.x+r,event.y+r,fill = "yellow")
+        self.points.append((event.x, event.y))
+        r = 1  # radius of the small circle
+        # make a small circle to show the point that the user picked
+        oval_id = self.canvas.create_oval(event.x - r, event.y - r, event.x + r, event.y + r, fill="yellow")
         self.oval_ids.append(oval_id)
-    #finishing polygon by connect the current point to first point
-    def finish_polygon(self,event):
-        #Incase the user mis-clicked before having enough points
-        #Create Polygon requires at least three points
+
+    # finishing polygon by connect the current point to first point
+    def finish_polygon(self, event):
+        # Incase the user mis-clicked before having enough points
+        # Create Polygon requires at least three points
         if len(self.points) < 3:
             return
 
-        #create a polygon with points user clicked
+        # create a polygon with points user clicked
         self.current_polygon_id = self.canvas.create_polygon(self.points,
-                            outline = "red", fill='',width=2,tags="roi")
+                                                             outline="red", fill='', width=2, tags="roi")
         self.oval_ids.append(self.current_polygon_id)
 
         y_scale = self.current_arw.raw_data.shape[0] / self.display_height
         x_scale = self.current_arw.raw_data.shape[1] / self.display_width
-        #analysis the points in self.points by right scale
-        new_points = [] #place holder for raw_data coordinate points
-        for x,y in self.points:
-            #transfer the x and y recorded by polygon to raw_data coordinate points
+        # analysis the points in self.points by right scale
+        new_points = []  # place holder for raw_data coordinate points
+        for x, y in self.points:
+            # transfer the x and y recorded by polygon to raw_data coordinate points
             x_new = np.round(x * x_scale)
             y_new = np.round(y * y_scale)
-            new_points.append((x_new,y_new))
-        
+            new_points.append((x_new, y_new))
+
         self.rois.append(new_points)
         self.points.clear()
 
         if len(self.rois) == 2:
-            self.current_arw.polygon_analysis(self.rois,self.calc_method)
+            self.current_arw.polygon_analysis(self.rois, self.calc_method)
 
-    # Function to pick a method to pick roi 
+            self.red_contrast_var.set(f"Red_Contrast:{self.current_arw.red_contrast}")
+            self.blue_contrast_var.set(f"Blue_Contrast:{self.current_arw.blue_contrast}")
+            self.green_contrast_var.set(f"Green_Contrast:{self.current_arw.green_contrast}")
+
+            self.update_histogram()
+
+    # Function to pick a method to pick roi
     # Bind events on functions for picking roi on the canvas, depending on which methods
-    def roi_method(self,event):
+    def roi_method(self, event):
         for r in self.oval_ids:
             self.canvas.delete(r)
         self.canvas.delete("roi")
         self.the_roi_method = self.roi_combobox.get()
+        # clear stored roi data and intensities so old data doesn't leak into the new method
+        if self.current_arw is not None:
+            self.cleareverything()
+
+        # clear the histogram plot itself
+        self.ax.clear()
+        self.histo_canvas.draw()
+
+        # clear the contrast labels too, since they reference the old ROI's results
+        self.red_contrast_var.set("")
+        self.blue_contrast_var.set("")
+        self.green_contrast_var.set("")
+
+        self.the_roi_method = self.roi_combobox.get()
         self.change_roi_method()
+
     def change_roi_method(self):
+
+        # unbind all the buttons before chaning method
+        for seq in ("<Button-1>", "<B1-Motion>", "<ButtonRelease-1>", "<Button-2>", "<Button-3>"):
+            self.canvas.unbind(seq)
+
         if self.the_roi_method == "Line":
+
             self.canvas.bind("<Button-1>", self.start_roi)
             self.canvas.bind("<B1-Motion>", self.drag_roi)
             self.canvas.bind("<ButtonRelease-1>", self.end_roi)
+
         elif self.the_roi_method == "Polygon":
+
             self.canvas.bind("<Button-1>", self.left_click)
-            self.canvas.bind("<Button-2>",self.finish_polygon)
-            self.canvas.bind("<Button-3>",self.finish_polygon)
+            self.canvas.bind("<Button-2>", self.finish_polygon)
+            self.canvas.bind("<Button-3>", self.finish_polygon)
+
     # Function to make histogram with matplotlib
     def show_histogram(self, channel):
 
-        #clear the previous histogram before updating new one
+        # clear the previous histogram before updating new one
         self.ax.clear()
         # The "0" list is the sample value list and "1" list is background value list
         if channel == "red":
@@ -400,6 +432,8 @@ class GUI():
         self.current_arw.mean_red.clear()
         self.current_arw.mean_green.clear()
         self.lines.clear()
+        self.points.clear()
+        self.oval_ids.clear()
         self.canvas.delete("roi")
         self.rois.clear()
         for i in self.current_arw.intensities.values():
