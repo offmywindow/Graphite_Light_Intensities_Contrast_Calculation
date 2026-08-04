@@ -178,9 +178,16 @@ class GUI():
 
         self.change_roi_method()
 
-    def background_file(self):
-        file_path = filedialog.askopenfilename(filetypes=[("ARW files", "*.ARW")])
 
+    def background_file(self):
+        #If didn't select main file, automatically return
+        if self.current_arw is None:
+            return
+
+        background_file_path = filedialog.askopenfilename(filetypes=[("ARW files", "*.ARW")])
+        #transfer the file into data_analysis module
+        if background_file_path:
+            self.current_arw.background_file_analysis(background_file_path)
 
     # Functions to pick roi and draw line
     def start_roi(self, event):
