@@ -4,7 +4,7 @@ from PIL import Image, ImageDraw
 
 # black level is a constant,512
 # black_level = raw.black_level_per_channel
-black_level = 512
+# black_level = 512
 
 
 class arwfile:
@@ -18,8 +18,20 @@ class arwfile:
         self.intensities = {"red": [[], []], "blue": [[], []], "green": [[], []]}
         with r.imread(self.file_path) as raw:
             self.raw_data = raw.raw_image.copy().astype(np.float32)
-            self.corrected_data = np.maximum(self.raw_data - black_level, 0)
+            #Apply minus black level when not using a background file, minus background file automatically reduce black level
+            # self.corrected_data = np.maximum(self.raw_data - black_level, 0)   
             self.rgb_image = raw.postprocess()
+
+    def background_file_analysis(self,background_file_path):
+
+        self.background_file_path = background_file_path
+        with r.imread(self.background_file_path) as raw:
+            self.background_raw_data = raw.raw_image.copy().astype(np.float32)
+
+        if self.background_raw_data.shape != self.raw_data.shape:
+            raise ValueError("Background image shape don't much main image shape")
+
+        self.corrected_data = self.raw_data - self.background_raw_data
 
     # Function to analysis data from rois,collect mean values from each channel
     def line_analysis(self, rois, method):
