@@ -23,24 +23,37 @@ class GUI():
         # define widgets and frame
         self.widgets_frame = tk.LabelFrame(self.main_frame, text="widgets_frame")
         self.widgets_frame.pack(side=tk.BOTTOM, fill=tk.X)
-        self.filebutton = tk.Button(self.widgets_frame, text="Open Arw File",
+        self.file_button = tk.Button(self.widgets_frame, text="Open Arw File",
                                     font=("Arial", 16), command=self.selectfile)
-        self.filebutton.pack()
-        # A reminder for user
-        self.reminder = tk.Label(self.widgets_frame, text="FIRST RECTANGLE HAS TO BE " \
-                                                          "INSIDE GRAPHITE", font=("Arial", 16))
-        self.reminder.pack()
+        self.file_button.pack()
+
+        # Button to pick empty wafer/background, correct_data - background to reduce noise
+        self.background_button = tk.Button(self.widgets_frame,text="Background",font=("Arial",16),command=self.background_file)
+        self.background_button.pack()
 
         # define frame for histrogram,also three choices of histogram
         self.histo_frame = tk.LabelFrame(self.main_frame, text="histo_frame")
         self.histo_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
+
+        self.information_frame = tk.Frame(self.histo_frame)
+        self.information_frame.pack(side=tk.BOTTOM)
+
+        # A reminder for user
+        self.reminder = tk.Label(self.information_frame, text="FIRST RECTANGLE HAS TO BE " \
+                                        "INSIDE GRAPHITE", font=("Arial", 16))
+        self.reminder.pack()
+
         self.channel_var = tk.StringVar(value="red")
-        tk.Radiobutton(self.histo_frame, text="red", variable=self.channel_var,
-                       value="red", command=self.update_histogram).pack()
-        tk.Radiobutton(self.histo_frame, text="green", variable=self.channel_var,
-                       value="green", command=self.update_histogram).pack()
-        tk.Radiobutton(self.histo_frame, text="blue", variable=self.channel_var,
-                       value="blue", command=self.update_histogram).pack()
+        self.radio_frame = tk.Frame(self.histo_frame)
+        self.radio_frame.pack()
+
+        tk.Radiobutton(self.radio_frame, text="Red", variable=self.channel_var,
+                       value="red", command=self.update_histogram).pack(side=tk.LEFT,padx=5)
+        tk.Radiobutton(self.radio_frame, text="Green", variable=self.channel_var,
+                       value="green", command=self.update_histogram).pack(side=tk.LEFT,padx=5)
+        tk.Radiobutton(self.radio_frame, text="Blue", variable=self.channel_var,
+                       value="blue", command=self.update_histogram).pack(side=tk.LEFT,padx=5)
+        
         # Make histogram figure with matplotlib
         self.fig = Figure(figsize=(3, 2))
         self.ax = self.fig.add_subplot()
@@ -62,6 +75,8 @@ class GUI():
         self.roi_combobox.pack(side=tk.TOP)
         self.roi_combobox.bind("<<ComboboxSelected>>", self.roi_method)
         self.the_roi_method = "Polygon"
+
+        
 
         # -----------------------------------------
         self.table_buttons_frame = tk.Frame(self.histo_frame)
@@ -118,11 +133,11 @@ class GUI():
         self.red_contrast_var = tk.StringVar(value=None)
         self.blue_contrast_var = tk.StringVar(value=None)
         self.green_contrast_var = tk.StringVar(value=None)
-        self.red_contrast_label = tk.Label(self.widgets_frame, textvariable=(self.red_contrast_var),
+        self.red_contrast_label = tk.Label(self.information_frame, textvariable=(self.red_contrast_var),
                                            font=('Arial', 12))
-        self.blue_contrast_label = tk.Label(self.widgets_frame, textvariable=(self.blue_contrast_var),
+        self.blue_contrast_label = tk.Label(self.information_frame, textvariable=(self.blue_contrast_var),
                                             font=('Arial', 12))
-        self.green_contrast_label = tk.Label(self.widgets_frame, textvariable=(self.green_contrast_var),
+        self.green_contrast_label = tk.Label(self.information_frame, textvariable=(self.green_contrast_var),
                                              font=('Arial', 12))
         self.red_contrast_label.pack()
         self.blue_contrast_label.pack()
@@ -162,6 +177,10 @@ class GUI():
         self.canvas.create_image(0, 0, anchor="nw", image=self.photo)
 
         self.change_roi_method()
+
+    def background_file(self):
+        file_path = filedialog.askopenfilename(filetypes=[("ARW files", "*.ARW")])
+
 
     # Functions to pick roi and draw line
     def start_roi(self, event):
