@@ -8,6 +8,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 import numpy as np
 import os
+from tkinter import messagebox
 
 
 class GUI():
@@ -71,11 +72,12 @@ class GUI():
         self.calc_method = "Mid 80% Intensity Contrast Calculation"
 
         # Method to pick roi
-        self.roi_combobox = ttk.Combobox(self.histo_frame, state="readonly", values=["Line", "Polygon"])
-        self.roi_combobox.current(1)
+        self.roi_combobox = ttk.Combobox(self.histo_frame, state="readonly", values=["Line", "Polygon","Polygon Compare Background"])
+        self.roi_combobox.current(2)
         self.roi_combobox.pack(side=tk.TOP)
         self.roi_combobox.bind("<<ComboboxSelected>>", self.roi_method)
-        self.the_roi_method = "Polygon"
+        self.the_roi_method = "Polygon Compare Background"
+        
 
         # -----------------------------------------
         self.table_buttons_frame = tk.Frame(self.histo_frame)
@@ -153,6 +155,11 @@ class GUI():
         self.oval_ids = []  # points for drawing the polygon
         self.background_file_path = None #place holder for background file path
 
+        #Bind keys that matches the original self.the_roit_method
+        self.canvas.bind("<Button-1>", self.left_click)
+        self.canvas.bind("<Button-2>", self.finish_polygon)
+        self.canvas.bind("<Button-3>", self.finish_polygon)
+
     # Select file and transfer the file path into arwfile class in data_analysis
     def selectfile(self):
         file_path = filedialog.askopenfilename(filetypes=[("ARW files", "*.ARW")])
@@ -176,8 +183,6 @@ class GUI():
         # grab x,y dimensions from canvas image display size
         self.display_width, self.display_height = image.size
         self.canvas.create_image(0, 0, anchor="nw", image=self.photo)
-
-        self.change_roi_method()
 
     def background_file(self):
         # If didn't select main file, automatically return
@@ -236,7 +241,7 @@ class GUI():
     # Functions for picking roi by polygon,reocrd the picked points
     def left_click(self, event):
 
-        if len(self.rois) >= 2:
+        if len(self.rois) >= 2 or (self.the_roi_method == "Polygon Compare Background" and len(self.rois) >= 1):
             # clear polygon, points..etc before draw a new set of rois
             for r in self.oval_ids:
                 self.canvas.delete(r)
@@ -274,8 +279,24 @@ class GUI():
         self.rois.append(new_points)
         self.points.clear()
 
-        if len(self.rois) == 2:
-            self.current_arw.polygon_analysis(self.rois, self.calc_method)
+        if len(self.rois) == 2 or (self.the_roi_method == "Polygon Compare Background" and len(self.rois) == 1):
+
+            if self.the_roi_method == "Polygon":
+
+                self.current_arw.polygon_analysis(self.rois, self.calc_method)
+
+            elif self.the_roi_method == "Polygon Compare Background":
+                #incase the user didn't select background file
+                if self.background_file_path is None:
+                    messagebox.showerror("Missing Background File","Please selecet a background file")
+                    for r in self.oval_ids:
+                        self.canvas.delete(r)
+                    self.canvas.delete("roi")
+                    self.rois.clear()
+
+                    return                
+
+                self.current_arw.background_file_analysis(self.rois,self.background_file_path)
 
             self.red_contrast_var.set(f"Red_Contrast:{self.current_arw.red_contrast}")
             self.blue_contrast_var.set(f"Blue_Contrast:{self.current_arw.blue_contrast}")
@@ -319,7 +340,13 @@ class GUI():
             self.canvas.bind("<ButtonRelease-1>", self.end_roi)
 
         elif self.the_roi_method == "Polygon":
+            #Bind two keys for method "finish_polygon" so both macbook and windows right click would work
+            self.canvas.bind("<Button-1>", self.left_click)
+            self.canvas.bind("<Button-2>", self.finish_polygon)
+            self.canvas.bind("<Button-3>", self.finish_polygon)
 
+        elif self.the_roi_method == "Polygon Compare Background":
+            #Bind two keys for method "finish_polygon" so both macbook and windows right click would work
             self.canvas.bind("<Button-1>", self.left_click)
             self.canvas.bind("<Button-2>", self.finish_polygon)
             self.canvas.bind("<Button-3>", self.finish_polygon)
