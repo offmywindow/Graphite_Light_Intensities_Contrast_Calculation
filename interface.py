@@ -24,11 +24,12 @@ class GUI():
         self.widgets_frame = tk.LabelFrame(self.main_frame, text="widgets_frame")
         self.widgets_frame.pack(side=tk.BOTTOM, fill=tk.X)
         self.file_button = tk.Button(self.widgets_frame, text="Open Arw File",
-                                    font=("Arial", 16), command=self.selectfile)
+                                     font=("Arial", 16), command=self.selectfile)
         self.file_button.pack()
 
         # Button to pick empty wafer/background, correct_data - background to reduce noise
-        self.background_button = tk.Button(self.widgets_frame,text="Background",font=("Arial",16),command=self.background_file)
+        self.background_button = tk.Button(self.widgets_frame, text="Background", font=("Arial", 16),
+                                           command=self.background_file)
         self.background_button.pack()
 
         # define frame for histrogram,also three choices of histogram
@@ -39,8 +40,8 @@ class GUI():
         self.information_frame.pack(side=tk.BOTTOM)
 
         # A reminder for user
-        self.reminder = tk.Label(self.information_frame, text="FIRST RECTANGLE HAS TO BE " \
-                                        "INSIDE GRAPHITE", font=("Arial", 16))
+        self.reminder = tk.Label(self.information_frame, text="FIRST ROI " \
+                                                              "INSIDE GRAPHITE", font=("Arial", 16))
         self.reminder.pack()
 
         self.channel_var = tk.StringVar(value="red")
@@ -48,12 +49,12 @@ class GUI():
         self.radio_frame.pack()
 
         tk.Radiobutton(self.radio_frame, text="Red", variable=self.channel_var,
-                       value="red", command=self.update_histogram).pack(side=tk.LEFT,padx=5)
+                       value="red", command=self.update_histogram).pack(side=tk.LEFT, padx=5)
         tk.Radiobutton(self.radio_frame, text="Green", variable=self.channel_var,
-                       value="green", command=self.update_histogram).pack(side=tk.LEFT,padx=5)
+                       value="green", command=self.update_histogram).pack(side=tk.LEFT, padx=5)
         tk.Radiobutton(self.radio_frame, text="Blue", variable=self.channel_var,
-                       value="blue", command=self.update_histogram).pack(side=tk.LEFT,padx=5)
-        
+                       value="blue", command=self.update_histogram).pack(side=tk.LEFT, padx=5)
+
         # Make histogram figure with matplotlib
         self.fig = Figure(figsize=(3, 2))
         self.ax = self.fig.add_subplot()
@@ -75,8 +76,6 @@ class GUI():
         self.roi_combobox.pack(side=tk.TOP)
         self.roi_combobox.bind("<<ComboboxSelected>>", self.roi_method)
         self.the_roi_method = "Polygon"
-
-        
 
         # -----------------------------------------
         self.table_buttons_frame = tk.Frame(self.histo_frame)
@@ -112,9 +111,9 @@ class GUI():
         self.tree.heading("B_Contrast", text="Blue")
 
         self.tree.column("Filename", width=120, anchor=tk.CENTER)
-        self.tree.column("R_Contrast", width=70, anchor=tk.CENTER)
-        self.tree.column("G_Contrast", width=70, anchor=tk.CENTER)
-        self.tree.column("B_Contrast", width=70, anchor=tk.CENTER)
+        self.tree.column("R_Contrast", width=90, anchor=tk.CENTER)
+        self.tree.column("G_Contrast", width=90, anchor=tk.CENTER)
+        self.tree.column("B_Contrast", width=90, anchor=tk.CENTER)
 
         self.tree.pack(fill=tk.X, padx=5, pady=5)
 
@@ -152,6 +151,7 @@ class GUI():
         self.polygon_id = []  # place holder for polygon ids
         self.current_polygon_id = None  # current polygon id, the one is drawing
         self.oval_ids = []  # points for drawing the polygon
+        self.background_file_path = None #place holder for background file path
 
     # Select file and transfer the file path into arwfile class in data_analysis
     def selectfile(self):
@@ -164,13 +164,14 @@ class GUI():
                 self.cleareverything()
             self.current_arw = data_analysis.arwfile(self.file_path)
             self.show_image()
+            #get a corrected data after selecting a new file
 
     # show rbg image on tkinter interface
     def show_image(self):
         image = Image.fromarray(self.current_arw.rgb_image)
         # canvas_width = self.canvas.winfo_width()
         # canvas_height = self.canvas.winfo_height()
-        image.thumbnail((800, 600))
+        image.thumbnail((1200, 900))
         self.photo = ImageTk.PhotoImage(image)
         # grab x,y dimensions from canvas image display size
         self.display_width, self.display_height = image.size
@@ -178,16 +179,13 @@ class GUI():
 
         self.change_roi_method()
 
-
     def background_file(self):
-        #If didn't select main file, automatically return
+        # If didn't select main file, automatically return
         if self.current_arw is None:
             return
 
-        background_file_path = filedialog.askopenfilename(filetypes=[("ARW files", "*.ARW")])
-        #transfer the file into data_analysis module
-        if background_file_path:
-            self.current_arw.background_file_analysis(background_file_path)
+        self.background_file_path = filedialog.askopenfilename(filetypes=[("ARW files", "*.ARW")])
+
 
     # Functions to pick roi and draw line
     def start_roi(self, event):
