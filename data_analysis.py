@@ -22,16 +22,47 @@ class arwfile:
             self.corrected_data = np.maximum(self.raw_data - black_level,0)
             self.rgb_image = raw.postprocess()
 
-    def background_file_analysis(self,background_file_path):
+    def background_file_analysis(self,roi,background_file_path):
 
         self.background_file_path = background_file_path
         with r.imread(self.background_file_path) as raw:
             self.background_raw_data = raw.raw_image.copy().astype(np.float32)
+            self.background_corrected_data = np.maximum(self.background_raw_data - black_level,0)
 
         if self.background_raw_data.shape != self.raw_data.shape:
-            raise ValueError("Background image shape don't much main image shape")
 
-        self.corrected_data = self.raw_data - self.background_raw_data
+            raise ValueError("Background image shape don't much main image shape")
+        """Getting the shape of main picture
+        Make sure the picture we are drawing with pillow has the exactly same shape, so our coordinates would be right"""
+        height,width = self.raw_data.shape
+
+        #L represent a gary picture, 0 is every value inside picture were zero
+        mask = Image.new("L", (width, height), 0)
+        draw = ImageDraw.Draw(mask)
+        draw.polygon(roi[0], outline=1, fill=1)
+        # turn in the picture into a numpy array
+        mask_array = np.array(mask)
+
+        #get all the coordinates from mask_array, all the coordinates inside the polygon
+        #numpy.nonzero() function returns the indices of all non-zero (or True) elements within an array.
+        y_values,x_values = np.nonzero(mask_array)
+
+        for y,x in zip(y_values,x_values):
+
+            value = self.corrected_data[y, x]  # the light intensity value for sample
+            background_value = self.background_corrected_data[y,x] #light intensity value for background
+            #append both value and background_value
+            if x % 2 == 0 and y % 2 == 0:
+                self.intensities["red"][0].append(value)
+                self.intensities["red"][1].append(background_value)
+            elif x % 2 == 1 and y % 2 == 1:
+                self.intensities["blue"][0].append(value)
+                self.intensities["blue"][1].append(background_value)
+            else:
+                self.intensities["green"][0].append(value)
+                self.intensities["green"][1].append(background_value)
+
+        self.mean_analysis()
 
     # Function to analysis data from rois,collect mean values from each channel
     def line_analysis(self, rois, method):
@@ -127,6 +158,7 @@ class arwfile:
         self.contrast_calculation()
 
     def contrast_calculation(self):
+
         self.red_contrast = (self.mean_red[0] - self.mean_red[1]) / self.mean_red[1]
         self.blue_contrast = (self.mean_blue[0] - self.mean_blue[1]) / self.mean_blue[1]
         self.green_contrast = (self.mean_green[0] - self.mean_green[1]) / self.mean_green[1]
