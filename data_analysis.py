@@ -4,7 +4,7 @@ from PIL import Image, ImageDraw
 
 # black level is a constant,512
 # black_level = raw.black_level_per_channel
-# black_level = 512
+black_level = 512
 
 
 class arwfile:
@@ -19,7 +19,7 @@ class arwfile:
         with r.imread(self.file_path) as raw:
             self.raw_data = raw.raw_image.copy().astype(np.float32)
             #Apply minus black level when not using a background file, minus background file automatically reduce black level
-            # self.corrected_data = np.maximum(self.raw_data - black_level, 0)   
+            self.corrected_data = np.maximum(self.raw_data - black_level,0)
             self.rgb_image = raw.postprocess()
 
     def background_file_analysis(self,background_file_path):
@@ -113,10 +113,12 @@ class arwfile:
                     # The reason convert numpy array to python list is make sure the function "cleareverything"(.clear()method) in interface moduel works fine
                     self.intensities[channel][i] = mid_80.tolist()
 
+
         self.mean_analysis()
 
     # function to analysis mean intensities before calculating contrast
     def mean_analysis(self):
+
         for i in range(0, 2):
             self.mean_red.append(np.mean(self.intensities["red"][i]))
             self.mean_blue.append(np.mean(self.intensities["blue"][i]))
