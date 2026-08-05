@@ -22,7 +22,7 @@ class arwfile:
             self.corrected_data = np.maximum(self.raw_data - black_level,0)
             self.rgb_image = raw.postprocess()
 
-    def background_file_analysis(self,roi,background_file_path):
+    def background_file_analysis(self,roi,background_file_path,calc_method):
 
         self.background_file_path = background_file_path
         with r.imread(self.background_file_path) as raw:
@@ -62,10 +62,25 @@ class arwfile:
                 self.intensities["green"][0].append(value)
                 self.intensities["green"][1].append(background_value)
 
+        # Two methods of mean_contrast calculation
+        if calc_method == "Full Mean Contrast Calculation":
+            pass
+        elif calc_method == "Mid 80% Intensity Contrast Calculation":
+            for channel in self.intensities:
+                for i in range(0,2):
+                    # transfer the list to numpy array
+                    values = np.array(self.intensities[channel][i])
+
+                    low = np.percentile(values, 10)
+                    high = np.percentile(values, 90)
+                    mid_80 = values[(values > low) & (values < high)]
+                    # The reason convert numpy array to python list is make sure the function "cleareverything"(.clear()method) in interface moduel works fine
+                    self.intensities[channel][i] = mid_80.tolist()
+
         self.mean_analysis()
 
     # Function to analysis data from rois,collect mean values from each channel
-    def line_analysis(self, rois, method):
+    def line_analysis(self, rois, calc_method):
 
         for i, roi in enumerate(rois):
             x1, y1, x2, y2 = roi
@@ -87,9 +102,9 @@ class arwfile:
                     self.intensities["green"][i].append(value)
 
             # Two methods of mean_contrast calculation
-            if method == "Full Mean Contrast Calculation":
+            if calc_method == "Full Mean Contrast Calculation":
                 pass
-            elif method == "Mid 80% Intensity Contrast Calculation":
+            elif calc_method == "Mid 80% Intensity Contrast Calculation":
                 for channel in self.intensities:
                     # transfer the list to numpy array
                     values = np.array(self.intensities[channel][i])
@@ -103,7 +118,7 @@ class arwfile:
         self.mean_analysis()
 
     # mean intensity analysis when roi pick method is rectangle
-    def polygon_analysis(self, rois, method):
+    def polygon_analysis(self, rois, calc_method):
 
         height, width = self.raw_data.shape
 
@@ -130,10 +145,10 @@ class arwfile:
                 else:
                     self.intensities["green"][i].append(value)
 
-            # Two methods of mean_contrast calculation
-            if method == "Full Mean Contrast Calculation":
+            # Two calculation methods of mean_contrast calculation
+            if calc_method == "Full Mean Contrast Calculation":
                 pass
-            elif method == "Mid 80% Intensity Contrast Calculation":
+            elif calc_method == "Mid 80% Intensity Contrast Calculation":
                 for channel in self.intensities:
                     # transfer the list to numpy array
                     values = np.array(self.intensities[channel][i])
