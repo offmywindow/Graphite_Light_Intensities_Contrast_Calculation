@@ -296,7 +296,7 @@ class GUI():
 
                     return                
 
-                self.current_arw.background_file_analysis(self.rois,self.background_file_path)
+                self.current_arw.background_file_analysis(self.rois,self.background_file_path,self.calc_method)
 
             self.red_contrast_var.set(f"Red_Contrast:{self.current_arw.red_contrast}")
             self.blue_contrast_var.set(f"Blue_Contrast:{self.current_arw.blue_contrast}")
