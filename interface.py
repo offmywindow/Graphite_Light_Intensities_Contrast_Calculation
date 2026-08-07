@@ -64,20 +64,21 @@ class GUI():
 
         # Make a combobox for different types of intensity contrast calculation
         self.calc_combobox = ttk.Combobox(self.histo_frame, state="readonly", values=["Full Mean Contrast Calculation",
-                                                                                      "Mid 80% Intensity Contrast Calculation"])
-        self.calc_combobox.current(1)
+                                                                                      "Mid 80% Intensity Contrast Calculation",
+                                                                                      "Mid 80% Contrast Pixel by Pixel"])
+        self.calc_combobox.current(0)
         self.calc_combobox.pack(side=tk.TOP)
         # bind a function with combo selection
         self.calc_combobox.bind("<<ComboboxSelected>>", self.calculation_method)
-        self.calc_method = "Mid 80% Intensity Contrast Calculation"
+        self.calc_method = "Full Mean Contrast Calculation"
 
         # Method to pick roi
-        self.roi_combobox = ttk.Combobox(self.histo_frame, state="readonly", values=["Line", "Polygon","Polygon Compare Background"])
-        self.roi_combobox.current(2)
+        self.roi_combobox = ttk.Combobox(self.histo_frame, state="readonly",
+                                         values=["Line", "Polygon", "Polygon Compare Background"])
+        self.roi_combobox.current(0)
         self.roi_combobox.pack(side=tk.TOP)
         self.roi_combobox.bind("<<ComboboxSelected>>", self.roi_method)
-        self.the_roi_method = "Polygon Compare Background"
-        
+        self.the_roi_method = "Line"
 
         # -----------------------------------------
         self.table_buttons_frame = tk.Frame(self.histo_frame)
@@ -153,9 +154,9 @@ class GUI():
         self.polygon_id = []  # place holder for polygon ids
         self.current_polygon_id = None  # current polygon id, the one is drawing
         self.oval_ids = []  # points for drawing the polygon
-        self.background_file_path = None #place holder for background file path
+        self.background_file_path = None  # place holder for background file path
 
-        #Bind keys that matches the original self.the_roit_method
+        # Bind keys that matches the original self.the_roit_method
         self.canvas.bind("<Button-1>", self.left_click)
         self.canvas.bind("<Button-2>", self.finish_polygon)
         self.canvas.bind("<Button-3>", self.finish_polygon)
@@ -171,7 +172,7 @@ class GUI():
                 self.cleareverything()
             self.current_arw = data_analysis.arwfile(self.file_path)
             self.show_image()
-            #get a corrected data after selecting a new file
+            # get a corrected data after selecting a new file
 
     # show rbg image on tkinter interface
     def show_image(self):
@@ -190,7 +191,6 @@ class GUI():
             return
 
         self.background_file_path = filedialog.askopenfilename(filetypes=[("ARW files", "*.ARW")])
-
 
     # Functions to pick roi and draw line
     def start_roi(self, event):
@@ -237,6 +237,9 @@ class GUI():
     # Function to pick the method of calculation according to the variable in combobox
     def calculation_method(self, event):
         self.calc_method = self.calc_combobox.get()
+        if self.calc_method == "Mid 80% Contrast Pixel by Pixel":
+            messagebox.showinfo(title="ROI Method Warning",message="Only \"Polygon Compare Background\" ROI Method Fits With The Calculation Method You Choose"
+                                                                   " Or There's Going To Be Error")
 
     # Functions for picking roi by polygon,reocrd the picked points
     def left_click(self, event):
@@ -286,17 +289,17 @@ class GUI():
                 self.current_arw.polygon_analysis(self.rois, self.calc_method)
 
             elif self.the_roi_method == "Polygon Compare Background":
-                #incase the user didn't select background file
+                # incase the user didn't select background file
                 if self.background_file_path is None:
-                    messagebox.showerror("Missing Background File","Please selecet a background file")
+                    messagebox.showerror("Missing Background File", "Please selecet a background file")
                     for r in self.oval_ids:
                         self.canvas.delete(r)
                     self.canvas.delete("roi")
                     self.rois.clear()
 
-                    return                
+                    return
 
-                self.current_arw.background_file_analysis(self.rois,self.background_file_path,self.calc_method)
+                self.current_arw.background_file_analysis(self.rois, self.background_file_path, self.calc_method)
 
             self.red_contrast_var.set(f"Red_Contrast:{self.current_arw.red_contrast}")
             self.blue_contrast_var.set(f"Blue_Contrast:{self.current_arw.blue_contrast}")
@@ -340,13 +343,13 @@ class GUI():
             self.canvas.bind("<ButtonRelease-1>", self.end_roi)
 
         elif self.the_roi_method == "Polygon":
-            #Bind two keys for method "finish_polygon" so both macbook and windows right click would work
+            # Bind two keys for method "finish_polygon" so both macbook and windows right click would work
             self.canvas.bind("<Button-1>", self.left_click)
             self.canvas.bind("<Button-2>", self.finish_polygon)
             self.canvas.bind("<Button-3>", self.finish_polygon)
 
         elif self.the_roi_method == "Polygon Compare Background":
-            #Bind two keys for method "finish_polygon" so both macbook and windows right click would work
+            # Bind two keys for method "finish_polygon" so both macbook and windows right click would work
             self.canvas.bind("<Button-1>", self.left_click)
             self.canvas.bind("<Button-2>", self.finish_polygon)
             self.canvas.bind("<Button-3>", self.finish_polygon)
@@ -387,7 +390,7 @@ class GUI():
             self.show_histogram(channel)
 
     def record_data(self):
-        if self.file_path is None or len(self.rois) < 2:
+        if self.file_path is None:
             return
 
         filename = os.path.basename(self.file_path)
