@@ -15,11 +15,16 @@ class arwfile:
         self.mean_green = []
         self.mean_red = []
         self.mean_blue = []
+        self.red_contrast_list = []
+        self.blue_contrast_list = []
+        self.green_contrast_list = []
+
         self.intensities = {"red": [[], []], "blue": [[], []], "green": [[], []]}
         with r.imread(self.file_path) as raw:
             self.raw_data = raw.raw_image.copy().astype(np.float32)
             #Apply minus black level when not using a background file, minus background file automatically reduce black level
             self.corrected_data = np.maximum(self.raw_data - black_level,0)
+            # self.corrected_data = self.raw_data
             self.rgb_image = raw.postprocess()
 
     def background_file_analysis(self,roi,background_file_path,calc_method):
@@ -28,6 +33,7 @@ class arwfile:
         with r.imread(self.background_file_path) as raw:
             self.background_raw_data = raw.raw_image.copy().astype(np.float32)
             self.background_corrected_data = np.maximum(self.background_raw_data - black_level,0)
+            # self.background_corrected_data = self.background_raw_data
 
         if self.background_raw_data.shape != self.raw_data.shape:
 
@@ -63,7 +69,7 @@ class arwfile:
                 self.intensities["green"][1].append(background_value)
 
         # Two methods of mean_contrast calculation
-        if calc_method == "Full Mean Contrast Calculation":
+        if calc_method == "Full Mean Contrast Calculation" or calc_method == "Mid 80% Contrast Pixel by Pixel":
             pass
         elif calc_method == "Mid 80% Intensity Contrast Calculation":
             for channel in self.intensities:
@@ -77,7 +83,7 @@ class arwfile:
                     # The reason convert numpy array to python list is make sure the function "cleareverything"(.clear()method) in interface moduel works fine
                     self.intensities[channel][i] = mid_80.tolist()
 
-        self.mean_analysis()
+        self.contrast_calculation(calc_method)
 
     # Function to analysis data from rois,collect mean values from each channel
     def line_analysis(self, rois, calc_method):
@@ -102,7 +108,7 @@ class arwfile:
                     self.intensities["green"][i].append(value)
 
             # Two methods of mean_contrast calculation
-            if calc_method == "Full Mean Contrast Calculation":
+            if calc_method == "Full Mean Contrast Calculation" or calc_method == "Mid 80% Contrast Pixel by Pixel":
                 pass
             elif calc_method == "Mid 80% Intensity Contrast Calculation":
                 for channel in self.intensities:
@@ -115,7 +121,7 @@ class arwfile:
                     # The reason convert numpy array to python list is make sure the function "cleareverything"(.clear()method) in interface moduel works fine
                     self.intensities[channel][i] = mid_80.tolist()
 
-        self.mean_analysis()
+        self.contrast_calculation(calc_method)
 
     # mean intensity analysis when roi pick method is rectangle
     def polygon_analysis(self, rois, calc_method):
@@ -146,7 +152,8 @@ class arwfile:
                     self.intensities["green"][i].append(value)
 
             # Two calculation methods of mean_contrast calculation
-            if calc_method == "Full Mean Contrast Calculation":
+            if calc_method == "Full Mean Contrast Calculation" or calc_method == "Mid 80% Contrast Pixel by Pixel":
+                #Useless if statement, just to clarify
                 pass
             elif calc_method == "Mid 80% Intensity Contrast Calculation":
                 for channel in self.intensities:
@@ -159,20 +166,34 @@ class arwfile:
                     # The reason convert numpy array to python list is make sure the function "cleareverything"(.clear()method) in interface moduel works fine
                     self.intensities[channel][i] = mid_80.tolist()
 
+        self.contrast_calculation(calc_method)
 
-        self.mean_analysis()
 
-    # function to analysis mean intensities before calculating contrast
-    def mean_analysis(self):
+
+    def contrast_calculation(self,calc_method):
+
+        if calc_method == "Mid 80% Contrast Pixel by Pixel":
+            #To calculate the contrast pixel by pixel and use the mean of the contrast
+            for i in range (0,len(self.intensities["red"][0])):
+                red_contrast = (self.intensities["red"][0][i] - self.intensities["red"][1][i])/self.intensities["red"][1][i]
+                self.red_contrast_list.append(red_contrast)
+            for i in range (0,len(self.intensities["blue"][0])):
+                blue_contrast = (self.intensities["blue"][0][i] - self.intensities["blue"][1][i])/self.intensities["blue"][1][i]
+                self.blue_contrast_list.append(blue_contrast)
+            for i in range (0,len(self.intensities["green"][0])):
+                green_contrast = (self.intensities["green"][0][i] - self.intensities["green"][1][i])/self.intensities["green"][1][i]
+                self.green_contrast_list.append(green_contrast)
+
+            self.red_contrast = np.median(self.red_contrast_list)
+            self.blue_contrast = np.median(self.blue_contrast_list)
+            self.green_contrast = np.median(self.green_contrast_list)
+
+            return
 
         for i in range(0, 2):
             self.mean_red.append(np.mean(self.intensities["red"][i]))
             self.mean_blue.append(np.mean(self.intensities["blue"][i]))
             self.mean_green.append(np.mean(self.intensities["green"][i]))
-
-        self.contrast_calculation()
-
-    def contrast_calculation(self):
 
         self.red_contrast = (self.mean_red[0] - self.mean_red[1]) / self.mean_red[1]
         self.blue_contrast = (self.mean_blue[0] - self.mean_blue[1]) / self.mean_blue[1]
